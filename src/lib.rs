@@ -1,3 +1,4 @@
+mod graph;
 mod interdependency;
 mod tokenizer;
 mod traits;
