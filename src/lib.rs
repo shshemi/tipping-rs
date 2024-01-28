@@ -1,8 +1,11 @@
 mod graph;
 mod interdependency;
+mod template;
 mod tokenizer;
 mod traits;
+mod parser;
 mod token_filter;
+pub use parser::Parser;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
