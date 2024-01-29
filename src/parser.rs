@@ -13,7 +13,7 @@ use crate::{
     template::{parameter_masks, shared_slices, templates},
     token_filter::InterdependencyFilter,
     tokenizer::{Token, Tokenizer},
-    traits::{Dependency, Tokenize},
+    traits::{Contains, Dependency, Tokenize},
 };
 
 type Clusters = Vec<Option<usize>>;
@@ -142,7 +142,7 @@ impl Parser<NoCompute, NoCompute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = cluster_map(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
@@ -165,9 +165,9 @@ impl Parser<Compute, NoCompute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = cluster_map(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
-        let mut temps = vec![HashSet::default(); clus.len()];
+        let mut temps = vec![HashSet::default(); cmap.len()];
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
@@ -202,7 +202,7 @@ impl Parser<NoCompute, Compute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = cluster_map(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut masks = HashMap::new();
         cmap.into_iter()
@@ -231,7 +231,10 @@ impl Parser<NoCompute, Compute> {
 }
 
 impl Parser<Compute, Compute> {
-    pub fn parse<Message: AsRef<str> + Sync>(self, messages: &[Message]) -> (Clusters, Templates, Masks) {
+    pub fn parse<Message: AsRef<str> + Sync>(
+        self,
+        messages: &[Message],
+    ) -> (Clusters, Templates, Masks) {
         let tokenizer = Tokenizer::new(self.special_whites, self.special_blacks, self.symbols);
         let filter = InterdependencyFilter::with(
             self.filter_alphabetic,
@@ -239,11 +242,11 @@ impl Parser<Compute, Compute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = cluster_map(messages, &tokenizer, &idep, self.threshold);
+        let groups = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
-        let mut temps = vec![HashSet::default(); clus.len()];
+        let mut temps = vec![HashSet::default(); groups.len()];
         let mut masks = HashMap::new();
-        cmap.into_iter()
+        groups.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
             .for_each(|(cid, (_, indices))| {
@@ -273,12 +276,12 @@ impl Parser<Compute, Compute> {
     }
 }
 
-fn cluster_map<'a, T: AsRef<str> + Sync>(
+fn group_by_key_tokens<'a, T: AsRef<str> + Sync>(
     messages: &'a [T],
     tokenizer: &Tokenizer,
     idep: &'a Interdependency<'a>,
     threshold: f32,
-) -> HashMap<BTreeSet<Token<'a>>, HashSet<usize>> {
+) -> HashMap<BTreeSet<Token<'a>>, BTreeSet<usize>> {
     messages
         .iter()
         .enumerate()
@@ -286,9 +289,13 @@ fn cluster_map<'a, T: AsRef<str> + Sync>(
         .map(|(idx, msg)| {
             (idx, {
                 let tokens = tokenizer.tokenize(msg.as_ref());
-                let graph = build_graph(tokens.iter().copied(), |g1, g2| {
-                    idep.dependency(g1.as_str(), g2.as_str()) > threshold
-                });
+                let graph = build_graph(
+                    tokens
+                        .iter()
+                        .copied()
+                        .filter(|tok| idep.contains(tok.as_str())),
+                    |tok1, tok2| idep.dependency(tok1.as_str(), tok2.as_str()) > threshold,
+                );
                 let mut key_toks = key_node_values(graph);
                 for tok in tokens {
                     match tok {
@@ -305,7 +312,7 @@ fn cluster_map<'a, T: AsRef<str> + Sync>(
             })
         })
         .fold_with(
-            HashMap::<BTreeSet<Token<'a>>, HashSet<usize>>::new(),
+            HashMap::<BTreeSet<Token<'a>>, BTreeSet<usize>>::new(),
             |mut map, (idx, key_tokens)| {
                 map.entry(key_tokens)
                     .and_modify(|indices| {
