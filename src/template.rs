@@ -45,7 +45,7 @@ pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
                 .fold(Vec::new(), |mut temp, slice| {
                     if common_slices.contains(slice) {
                         temp.push(Some(slice));
-                    } else if !matches!(temp.last(), Some(None)) || !matches!(temp.get(temp.len() - 2), Some(None)) {
+                    } else {
                         temp.push(None);
                     }
                     temp
