@@ -5,10 +5,11 @@ use fancy_regex::Regex;
 pub fn compile_into_regex<Item, Iter>(regex_str: Iter) -> Regex
 where
  Item: AsRef<str>,
- Iter: Iterator<Item = Item>
+ Iter: IntoIterator<Item = Item>
 {
     Regex::new(
         regex_str
+            .into_iter()
             .map(|s| format!(r"(?:{})", s.as_ref()))
             .join("|")
             .as_str(),
@@ -22,7 +23,7 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let r = compile_into_regex([r"\d+", r"[a-zA-Z]+"].into_iter());
+        let r = compile_into_regex([r"\d+", r"[a-zA-Z]+"]);
         assert!(r.is_match("123").unwrap());
         assert!(r.is_match("abc").unwrap());
         assert!(r.is_match("ABC").unwrap());
