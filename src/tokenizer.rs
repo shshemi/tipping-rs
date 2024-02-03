@@ -9,8 +9,8 @@ pub struct Tokenizer {
     special_blacks: Vec<Regex>,
     symbols: HashSet<char>,
 }
- 
-impl Tokenize for Tokenizer{
+
+impl Tokenize for Tokenizer {
     fn tokenize<'a>(&self, msg: &'a str) -> Vec<Token<'a>> {
         let mut tokens = Vec::new();
         for pre_token in self.pre_tokenize(msg) {
@@ -43,6 +43,13 @@ impl Tokenizer {
         }
     }
 
+    pub fn new_with_symbols(&self, symbols: HashSet<char>) -> Self {
+        Tokenizer {
+            special_whites: self.special_whites.clone(),
+            special_blacks: self.special_blacks.clone(),
+            symbols,
+        }
+    }
 
     fn pre_tokenize<'a>(&self, msg: &'a str) -> Vec<PreToken<'a>> {
         let mut pre_toks = vec![PreToken::Unrefined(msg)];
@@ -106,10 +113,10 @@ fn split_special<'a, Special: Fn(&'a str) -> PreToken>(
         let end = m.end();
         if end - start > 0 {
             if start != last_idx {
-            pre_tokens.push(PreToken::Unrefined(&msg[last_idx..m.start()]));
-        }
-        pre_tokens.push(special_type(m.as_str()));
-        last_idx = m.end();
+                pre_tokens.push(PreToken::Unrefined(&msg[last_idx..m.start()]));
+            }
+            pre_tokens.push(special_type(m.as_str()));
+            last_idx = m.end();
         }
     }
     if last_idx != msg.len() {
