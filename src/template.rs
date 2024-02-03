@@ -2,7 +2,10 @@ use std::collections::{HashMap, HashSet};
 
 use rayon::prelude::*;
 
-use crate::{tokenizer::{Token, Tokenizer}, traits::Tokenize};
+use crate::{
+    tokenizer::{self, Token, Tokenizer},
+    traits::Tokenize,
+};
 
 pub fn shared_slices<'a, Iter: Iterator<Item = &'a str> + Send>(
     iter: Iter,
