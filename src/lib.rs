@@ -7,6 +7,7 @@ mod traits;
 mod parser;
 mod token_filter;
 pub use parser::Parser;
+pub use misc::compile_into_regex;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
