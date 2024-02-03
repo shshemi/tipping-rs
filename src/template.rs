@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use rayon::prelude::*;
 
 use crate::{
-    tokenizer::{self, Token, Tokenizer},
+    tokenizer::{Token, Tokenizer},
     traits::Tokenize,
 };
 
@@ -80,21 +80,51 @@ pub fn parameter_masks<'a, Iter: Iterator<Item = &'a str> + Send>(
     iter.par_bridge()
         .fold_with(HashMap::new(), |mut map, msg| {
             let toks = tokenizer.tokenize(msg);
-            let mut msk_vec = Vec::with_capacity(msg.len());
-            toks.into_iter().for_each(|tok| {
-                let slice = tok.as_str();
-                if common_slices.contains(slice) {
-                    (0..slice.len()).for_each(|_| msk_vec.push('0'));
-                } else {
-                    (0..slice.len()).for_each(|_| msk_vec.push('1'));
-                }
-            });
-            let chars = msg.chars().collect::<Vec<_>>();
-            for idx in 1..msk_vec.len() - 2 {
-                if msk_vec[idx - 1] == '1' && msk_vec[idx + 1] == '1' && chars[idx] != ' ' {
-                    msk_vec[idx] = '1'
-                }
-            }
+            let mut msk_vec = String::with_capacity(msg.len());
+            let mut should_parameterize = false;
+            toks.iter()
+                .copied()
+                .enumerate()
+                .for_each(|(idx, tok)| match tok {
+                    Token::Symbolic(slice) => {
+                        if common_slices.contains(slice) {
+                            if matches!(
+                                toks.get(idx + 1),
+                                Some(Token::Whitespace(_)) | Some(Token::Symbolic(_)) | None
+                            ) || matches!(
+                                toks.get(idx + 1),
+                                Some(Token::Whitespace(_)) | Some(Token::Symbolic(_)) | None
+                            ) {
+                                msk_vec.push('0');
+                            } else if should_parameterize {
+                                msk_vec.push('1');
+                            } else {
+                                msk_vec.push('0');
+                            }
+                        } else {
+                            msk_vec.push('1');
+                        }
+                    }
+                    Token::Whitespace(_) => {
+                        msk_vec.push('0');
+                        should_parameterize = false;
+                    }
+                    Token::SpecialWhite(slice) => {
+                        (0..slice.len()).for_each(|_| msk_vec.push('0'));
+                    }
+                    Token::SpecialBlack(slice) => {
+                        (0..slice.len()).for_each(|_| msk_vec.push('1'));
+                    }
+                    _ => {
+                        let slice = tok.as_str();
+                        if !common_slices.contains(slice) || should_parameterize {
+                            (0..slice.len()).for_each(|_| msk_vec.push('1'));
+                            should_parameterize = true;
+                        } else {
+                            (0..slice.len()).for_each(|_| msk_vec.push('0'));
+                        }
+                    }
+                });
             map.insert(msg, msk_vec);
             map
         })
@@ -107,7 +137,7 @@ pub fn parameter_masks<'a, Iter: Iterator<Item = &'a str> + Send>(
             m1
         })
         .into_iter()
-        .map(|(k, v)| (k.to_owned(), v.into_iter().collect()))
+        .map(|(k, v)| (k.to_owned(), v))
         .collect()
 }
 
@@ -127,5 +157,21 @@ mod tests {
         let expected = HashSet::from(["The", "value", "is", " "]);
         let computed = shared_slices(msgs.into_iter(), &tokenizer, true, false, false);
         assert_eq!(computed, expected);
+    }
+
+    #[test]
+    fn test_parameter_mask() {
+        let msgs = ["The value is (val_123) ->"];
+        let tokenizer = Tokenizer::new(
+            Default::default(),
+            Default::default(),
+            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
+        );
+        let common_slices = HashSet::from(["The", "value", "is", "val", "-", ">", "(", ")", "_"]);
+        let pm = parameter_masks(msgs.into_iter(), &tokenizer, &common_slices);
+        for (k, v) in pm {
+            println!("{}", k);
+            println!("{}", v);
+        }
     }
 }
