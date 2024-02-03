@@ -5,7 +5,7 @@ use std::{
 
 use rayon::prelude::*;
 
-use regex::Regex;
+use fancy_regex::Regex;
 
 use crate::{
     graph::{build_graph, key_node_values},

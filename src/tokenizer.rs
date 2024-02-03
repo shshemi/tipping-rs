@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use regex::Regex;
+use fancy_regex::Regex;
 
 use crate::traits::Tokenize;
 
@@ -101,15 +101,16 @@ fn split_special<'a, Special: Fn(&'a str) -> PreToken>(
 ) -> Vec<PreToken<'a>> {
     let mut last_idx = 0;
     let mut pre_tokens = Vec::new();
-    for m in regex.find_iter(msg) {
-        if m.is_empty() {
-            continue;
-        }
-        if m.start() != last_idx {
+    for m in regex.find_iter(msg).filter_map(Result::ok) {
+        let start = m.start();
+        let end = m.end();
+        if end - start > 0 {
+            if start != last_idx {
             pre_tokens.push(PreToken::Unrefined(&msg[last_idx..m.start()]));
         }
         pre_tokens.push(special_type(m.as_str()));
         last_idx = m.end();
+        }
     }
     if last_idx != msg.len() {
         pre_tokens.push(PreToken::Unrefined(&msg[last_idx..]));

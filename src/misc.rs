@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use regex::Regex;
+use fancy_regex::Regex;
 
 
 pub fn compile_into_regex<Item, Iter>(regex_str: Iter) -> Regex
@@ -23,11 +23,11 @@ mod tests {
     #[test]
     fn test_name() {
         let r = compile_into_regex([r"\d+", r"[a-zA-Z]+"].into_iter());
-        assert!(r.is_match("123"));
-        assert!(r.is_match("abc"));
-        assert!(r.is_match("ABC"));
+        assert!(r.is_match("123").unwrap());
+        assert!(r.is_match("abc").unwrap());
+        assert!(r.is_match("ABC").unwrap());
 
-        assert!(!r.is_match("@"));
-        assert!(!r.is_match("#"));
+        assert!(!r.is_match("@").unwrap());
+        assert!(!r.is_match("#").unwrap());
     }
 }
