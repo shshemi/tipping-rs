@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use hashbrown::{HashMap, HashSet};
 
 use crate::traits::{Contains, Dependency, TokenFilter, Tokenize};
 use itertools::Itertools;

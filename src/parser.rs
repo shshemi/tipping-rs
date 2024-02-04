@@ -1,8 +1,6 @@
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    marker::PhantomData,
-};
+use std::{collections::BTreeSet, marker::PhantomData};
 
+use hashbrown::{HashMap, HashSet};
 use rayon::prelude::*;
 
 use fancy_regex::Regex;
@@ -17,8 +15,8 @@ use crate::{
 };
 
 type Clusters = Vec<Option<usize>>;
-type Templates = Vec<HashSet<String>>;
-type Masks = HashMap<String, String>;
+type Templates = Vec<std::collections::HashSet<String>>;
+type Masks = std::collections::HashMap<String, String>;
 
 pub struct NoCompute;
 pub struct Compute;
@@ -199,9 +197,8 @@ impl Parser<Compute, NoCompute> {
         let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); cmap.len()];
-        let tokenizer = tokenizer.new_with_symbols(
-            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
-        );
+        let tokenizer =
+            tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
@@ -223,7 +220,13 @@ impl Parser<Compute, NoCompute> {
                 }
             });
 
-        (clus, temps)
+        (
+            clus,
+            temps
+                .into_iter()
+                .map(|map| map.into_iter().collect())
+                .collect(),
+        )
     }
 }
 
@@ -247,9 +250,8 @@ impl Parser<NoCompute, Compute> {
         let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut masks = HashMap::new();
-        let tokenizer = tokenizer.new_with_symbols(
-            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
-        );
+        let tokenizer =
+            tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
@@ -271,7 +273,7 @@ impl Parser<NoCompute, Compute> {
                 }
             });
 
-        (clus, masks)
+        (clus, masks.into_iter().collect())
     }
 }
 
@@ -302,9 +304,8 @@ impl Parser<Compute, Compute> {
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); groups.len()];
         let mut masks = HashMap::new();
-        let tokenizer = tokenizer.new_with_symbols(
-            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
-        );
+        let tokenizer =
+            tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         groups
             .into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
@@ -332,7 +333,14 @@ impl Parser<Compute, Compute> {
                 }
             });
 
-        (clus, temps, masks)
+        (
+            clus,
+            temps
+                .into_iter()
+                .map(|map| map.into_iter().collect())
+                .collect(),
+            masks.into_iter().collect(),
+        )
     }
 }
 
