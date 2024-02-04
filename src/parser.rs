@@ -199,6 +199,9 @@ impl Parser<Compute, NoCompute> {
         let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); cmap.len()];
+        let tokenizer = tokenizer.new_with_symbols(
+            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
+        );
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
@@ -244,6 +247,9 @@ impl Parser<NoCompute, Compute> {
         let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut masks = HashMap::new();
+        let tokenizer = tokenizer.new_with_symbols(
+            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
+        );
         cmap.into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
             .enumerate()
@@ -296,6 +302,9 @@ impl Parser<Compute, Compute> {
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); groups.len()];
         let mut masks = HashMap::new();
+        let tokenizer = tokenizer.new_with_symbols(
+            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect(),
+        );
         groups
             .into_iter()
             .filter(|(key_toks, _)| !key_toks.is_empty())
