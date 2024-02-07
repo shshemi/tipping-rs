@@ -27,23 +27,12 @@ pub fn build_graph<T: Clone + Eq + Hash, Iter: Iterator<Item = T>>(
     });
     graph
 }
-pub fn key_node_values<T: Clone + Eq + Hash + Ord>(
-    g: MatrixGraph<T, ()>,
-) -> BTreeSet<T> {
+pub fn key_node_values<T: Clone + Eq + Hash + Ord>(g: MatrixGraph<T, ()>) -> BTreeSet<T> {
     let scc = kosaraju_scc(&g);
     let key_nodes = scc
         .iter()
-        .enumerate()
-        .max_by_key(|(_, cc)| cc.len())
-        .map(|(lcc_idx, _)| {
-            let temp_toks = scc[..=lcc_idx]
-                .iter()
-                .flat_map(|v| v.iter())
-                .map(|n| g.node_weight(*n).clone())
-                .collect::<BTreeSet<_>>();
-            temp_toks
-        })
+        .max_by_key(|cc| cc.len())
+        .map(|lcc| lcc.iter().map(|v| g.node_weight(*v)).cloned().collect())
         .unwrap_or_default();
     key_nodes
 }
-
