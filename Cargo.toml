@@ -2,6 +2,12 @@
 name = "tipping-rs"
 version = "0.1.0"
 edition = "2021"
+authors = ["Shayan Hashemi <shshemi@gmail.com>"]
+keywords = ["log parsing","log clustering", "log", "tipping"]
+repository = "https://github.com/shshemi/tipping-rs"
+readme = "README.md"
+description = "A Rust implementation of Token Interdependency Parsing (Tipping) algorithm"
+license-file = "LICENSE"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
