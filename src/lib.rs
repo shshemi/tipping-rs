@@ -1,17 +1,13 @@
 mod graph;
 mod interdependency;
 mod misc;
+mod parser;
 mod template;
+mod token_filter;
 mod tokenizer;
 mod traits;
-mod parser;
-mod token_filter;
-pub use parser::Parser;
 pub use misc::compile_into_regex;
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+pub use parser::Parser;
 
 #[cfg(test)]
 mod tests {
