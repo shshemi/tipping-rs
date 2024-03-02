@@ -9,6 +9,7 @@ mod traits;
 pub use misc::compile_into_regex;
 pub use parser::Parser;
 pub use tokenizer::Tokenizer;
+pub use template::{shared_slices, parameter_masks};
 
 #[cfg(test)]
 mod tests {
