@@ -1,6 +1,6 @@
 [package]
 name = "tipping-rs"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = ["Shayan Hashemi <shshemi@gmail.com>"]
 keywords = ["log-parsing","log-clustering", "log", "parsing", "tipping"]
