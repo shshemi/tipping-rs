@@ -8,6 +8,7 @@ mod tokenizer;
 mod traits;
 pub use misc::compile_into_regex;
 pub use parser::Parser;
+pub use tokenizer::Tokenizer;
 
 #[cfg(test)]
 mod tests {
