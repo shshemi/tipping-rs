@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use fancy_regex::Regex;
 
 use crate::{
-    graph::{build_graph, key_node_values},
+    graph::{build_graph, anchor_nodes},
     interdependency::Interdependency,
     template::{parameter_masks, shared_slices, templates},
     token_filter::StaticFilter,
@@ -162,10 +162,10 @@ impl Parser<NoCompute, NoCompute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         cmap.into_iter()
-            .filter(|(key_toks, _)| !key_toks.is_empty())
+            .filter(|(anchor_toks, _)| !anchor_toks.is_empty())
             .enumerate()
             .for_each(|(cid, (_, indices))| {
                 for idx in indices {
@@ -194,13 +194,13 @@ impl Parser<Compute, NoCompute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); cmap.len()];
         let tokenizer =
             tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         cmap.into_iter()
-            .filter(|(key_toks, _)| !key_toks.is_empty())
+            .filter(|(anchor_toks, _)| !anchor_toks.is_empty())
             .enumerate()
             .for_each(|(cid, (_, indices))| {
                 let stok = shared_slices(
@@ -247,13 +247,13 @@ impl Parser<NoCompute, Compute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let cmap = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
+        let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut masks = HashMap::new();
         let tokenizer =
             tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         cmap.into_iter()
-            .filter(|(key_toks, _)| !key_toks.is_empty())
+            .filter(|(anchor_toks, _)| !anchor_toks.is_empty())
             .enumerate()
             .for_each(|(cid, (_, indices))| {
                 let stok = shared_slices(
@@ -300,7 +300,7 @@ impl Parser<Compute, Compute> {
             self.filter_impure,
         );
         let idep = Interdependency::new(messages, &tokenizer, &filter);
-        let groups = group_by_key_tokens(messages, &tokenizer, &idep, self.threshold);
+        let groups = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); groups.len()];
         let mut masks = HashMap::new();
@@ -308,7 +308,7 @@ impl Parser<Compute, Compute> {
             tokenizer.new_with_symbols("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".chars().collect());
         groups
             .into_iter()
-            .filter(|(key_toks, _)| !key_toks.is_empty())
+            .filter(|(anchor_toks, _)| !anchor_toks.is_empty())
             .enumerate()
             .for_each(|(cid, (_, indices))| {
                 let stok = shared_slices(
@@ -344,7 +344,7 @@ impl Parser<Compute, Compute> {
     }
 }
 
-fn group_by_key_tokens<'a, T: AsRef<str> + Sync>(
+fn group_by_anchor_tokens<'a, T: AsRef<str> + Sync>(
     messages: &'a [T],
     tokenizer: &Tokenizer,
     idep: &'a Interdependency<'a>,
@@ -364,25 +364,25 @@ fn group_by_key_tokens<'a, T: AsRef<str> + Sync>(
                         .filter(|tok| idep.contains(tok.as_str())),
                     |tok1, tok2| idep.dependency(tok1.as_str(), tok2.as_str()) > threshold,
                 );
-                let mut key_toks = key_node_values(graph);
+                let mut anchor_toks = anchor_nodes(graph);
                 for tok in tokens {
                     match tok {
                         Token::SpecialWhite(_) => {
-                            key_toks.insert(tok);
+                            anchor_toks.insert(tok);
                         }
                         Token::SpecialBlack(_) => {
-                            key_toks.remove(&tok);
+                            anchor_toks.remove(&tok);
                         }
                         _ => (),
                     }
                 }
-                key_toks
+                anchor_toks
             })
         })
         .fold_with(
             HashMap::<BTreeSet<Token<'a>>, BTreeSet<usize>>::new(),
-            |mut map, (idx, key_tokens)| {
-                map.entry(key_tokens)
+            |mut map, (idx, anchor_tokens)| {
+                map.entry(anchor_tokens)
                     .and_modify(|indices| {
                         indices.insert(idx);
                     })
