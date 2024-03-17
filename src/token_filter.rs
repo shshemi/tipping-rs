@@ -1,14 +1,13 @@
-use crate::traits::TokenFilter;
 use crate::tokenizer::Token;
+use crate::traits::TokenFilter;
 
-
-pub struct InterdependencyFilter{
+pub struct StaticFilter {
     alphabetic: bool,
     numeric: bool,
     impure: bool,
 }
 
-impl InterdependencyFilter {
+impl StaticFilter {
     pub fn with(alphabetic: bool, numeric: bool, impure: bool) -> Self {
         Self {
             alphabetic,
@@ -18,7 +17,7 @@ impl InterdependencyFilter {
     }
 }
 
-impl TokenFilter for InterdependencyFilter {
+impl TokenFilter for StaticFilter {
     fn token_filter(&self, tok: &Token) -> bool {
         match tok {
             Token::Alphabetic(_) => self.alphabetic,

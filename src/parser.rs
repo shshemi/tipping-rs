@@ -9,7 +9,7 @@ use crate::{
     graph::{build_graph, key_node_values},
     interdependency::Interdependency,
     template::{parameter_masks, shared_slices, templates},
-    token_filter::InterdependencyFilter,
+    token_filter::StaticFilter,
     tokenizer::{Token, Tokenizer},
     traits::{Contains, Dependency, Tokenize},
 };
@@ -156,7 +156,7 @@ impl Parser<NoCompute, NoCompute> {
     ///
     pub fn parse<Message: AsRef<str> + Sync>(self, messages: &[Message]) -> Clusters {
         let tokenizer = Tokenizer::new(self.special_whites, self.special_blacks, self.symbols);
-        let filter = InterdependencyFilter::with(
+        let filter = StaticFilter::with(
             self.filter_alphabetic,
             self.filter_numeric,
             self.filter_impure,
@@ -188,7 +188,7 @@ impl Parser<Compute, NoCompute> {
     ///
     pub fn parse<Message: AsRef<str> + Sync>(self, messages: &[Message]) -> (Clusters, Templates) {
         let tokenizer = Tokenizer::new(self.special_whites, self.special_blacks, self.symbols);
-        let filter = InterdependencyFilter::with(
+        let filter = StaticFilter::with(
             self.filter_alphabetic,
             self.filter_numeric,
             self.filter_impure,
@@ -241,7 +241,7 @@ impl Parser<NoCompute, Compute> {
     ///
     pub fn parse<Message: AsRef<str> + Sync>(self, messages: &[Message]) -> (Clusters, Masks) {
         let tokenizer = Tokenizer::new(self.special_whites, self.special_blacks, self.symbols);
-        let filter = InterdependencyFilter::with(
+        let filter = StaticFilter::with(
             self.filter_alphabetic,
             self.filter_numeric,
             self.filter_impure,
@@ -294,7 +294,7 @@ impl Parser<Compute, Compute> {
         messages: &[Message],
     ) -> (Clusters, Templates, Masks) {
         let tokenizer = Tokenizer::new(self.special_whites, self.special_blacks, self.symbols);
-        let filter = InterdependencyFilter::with(
+        let filter = StaticFilter::with(
             self.filter_alphabetic,
             self.filter_numeric,
             self.filter_impure,
