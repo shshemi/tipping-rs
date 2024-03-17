@@ -12,7 +12,7 @@ cargo add tipping-rs
 Load your log messages into a list of strings (`Vec<String>`) and:
 ```rust
     let msgs: Vec<String>;
-    let parser = tipping_rs::Parser::default()
+    let (event_ids, masks, templates) = tipping_rs::Parser::default()
         .with_threshold(threshold)
         .with_special_whites(special_whites)
         .with_special_blacks(special_blacks)
