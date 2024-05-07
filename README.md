@@ -21,8 +21,8 @@ Load your log messages into a list of strings (`Vec<String>`) and:
         .with_filter_numeric(filter.numeric)
         .with_filter_impure(filter.impure)
         .compute_templates()
-        .compuate_masks()
-        .parse(msgs)
+        .compute_masks()
+        .parse(msgs);
 ```
 
 ## Cite

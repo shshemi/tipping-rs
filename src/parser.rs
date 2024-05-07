@@ -23,23 +23,29 @@ pub struct Compute;
 
 /// Tipping (Token Interdependency Parsing) log parser
 /// ```
+/// use fancy_regex::Regex;
+/// 
 ///let msgs = vec![
 ///     "User 'admin' logged in from IP address 192.168.1.10",
 ///     "Attempt to access unauthorized resource by user 'guest'",
 ///     "Database connection failed due to timeout",
 ///     "Processing request for data retrieval with queryId: 34521",
-/// ]
+/// ];
+///
+///let special_whites = vec![];
+///let special_blacks = vec![Regex::new(r"(?:[0-9]{1,3}\.){3}[0-9]{1,3}").unwrap()];
+///let symbols = "'{}|,".chars().collect();
 ///let (event_ids, masks, templates) = tipping_rs::Parser::default()
-///    .with_threshold(threshold)
+///    .with_threshold(0.5)
 ///    .with_special_whites(special_whites)
 ///    .with_special_blacks(special_blacks)
 ///    .with_symbols(symbols)
-///    .with_filter_alphabetic(filter.alphabetic)
-///    .with_filter_numeric(filter.numeric)
-///    .with_filter_impure(filter.impure)
+///    .with_filter_alphabetic(true)
+///    .with_filter_numeric(false)
+///    .with_filter_impure(false)
 ///    .compute_templates()
-///    .compuate_masks()
-///    .parse(msgs)
+///    .compute_masks()
+///    .parse(&msgs);
 /// ```
 #[derive(Debug, Clone)]
 pub struct Parser<Templates = NoCompute, Masks = NoCompute> {
