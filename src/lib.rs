@@ -47,7 +47,7 @@ mod tests {
         // let exp_temps = vec![
 
         // ]
-        let exp_all_temps = ["a <*> b", "c <*> d"]
+        let exp_all_temps = ["a <*> b", "a <*> <*> b", "c <*> d"]
             .into_iter()
             .map(ToOwned::to_owned)
             .collect::<HashSet<String>>();
