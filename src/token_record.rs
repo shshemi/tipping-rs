@@ -1,30 +1,30 @@
 use hashbrown::{HashMap, HashSet};
 
-use crate::traits::{Contains, Dependency, TokenFilter, Tokenize};
+use crate::traits::{ TokenFilter, Tokenize};
 use itertools::Itertools;
 
 use rayon::prelude::*;
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
-pub struct PairSet<'a>(&'a str, &'a str);
+struct TokenPair<'a>(&'a str, &'a str);
 
-impl<'a> PairSet<'a> {
+impl<'a> TokenPair<'a> {
     pub fn with(t1: &'a str, t2: &'a str) -> Self {
         if t1 > t2 {
-            PairSet(t1, t2)
+            TokenPair(t1, t2)
         } else {
-            PairSet(t2, t1)
+            TokenPair(t2, t1)
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Interdependency<'a> {
-    soc: HashMap<&'a str, usize>,
-    poc: HashMap<PairSet<'a>, usize>,
+pub struct TokenRecord<'a> {
+    soc: HashMap<&'a str, u32>,
+    poc: HashMap<TokenPair<'a>, u32>,
 }
 
-impl<'a> Interdependency<'a> {
+impl<'a> TokenRecord<'a> {
     pub fn new<Message, Tokenizer, Filter>(
         msgs: &'a [Message],
         tokenizer: &Tokenizer,
@@ -54,14 +54,14 @@ impl<'a> Interdependency<'a> {
                     for tok in &toks {
                         soc.entry(*tok)
                             .and_modify(|count| *count += 1)
-                            .or_insert(1_usize);
+                            .or_insert(1);
                     }
 
                     // Insert double occurances
                     for (tok1, tok2) in toks.iter().tuple_combinations() {
-                        poc.entry(PairSet::with(tok1, tok2))
+                        poc.entry(TokenPair::with(tok1, tok2))
                             .and_modify(|count| *count += 1)
-                            .or_insert(1_usize);
+                            .or_insert(1);
                     }
                     (soc, poc)
                 },
@@ -83,25 +83,23 @@ impl<'a> Interdependency<'a> {
 
         Self { soc, poc }
     }
-}
 
-impl<'a> Dependency<&'a str> for Interdependency<'a> {
-    fn dependency(&self, eve: &'a str, con: &'a str) -> f32 {
+    pub fn occurence(&self, tok: impl AsRef<str>) -> Option<u32> {
+        self.soc.get(tok.as_ref()).copied()
+    }
+
+    pub fn coocurence(&self, tok1: impl AsRef<str>, tok2: impl AsRef<str>) -> Option<u32> {
+        self.poc.get(&TokenPair::with(tok1.as_ref(), tok2.as_ref())).copied()
+    }
+
+    pub fn dependency(&self, eve: &'a str, con: &'a str) -> Option<f32> {
         let double = *self
             .poc
-            .get(&PairSet::with(eve, con))
-            .unwrap_or_else(|| panic!("Pair {:?} not found in occurances", [eve, con]));
+            .get(&TokenPair::with(eve, con))?;
         let single = *self
             .soc
-            .get(eve)
-            .unwrap_or_else(|| panic!("Word '{}' not found in occurances", eve));
-        (double as f32) / (single as f32)
-    }
-}
-
-impl<'a> Contains<&'a str> for Interdependency<'a> {
-    fn contains(&self, item: &'a str) -> bool {
-        self.soc.contains_key(item)
+            .get(eve)?;
+        Some((double as f32) / (single as f32))
     }
 }
 
@@ -116,7 +114,7 @@ mod tests {
         let msg = ["a x1 b", "a x2 b", "a x3 c", "a x4 c"];
         let tokenizer = MockTokenizer;
         let filter = MockFilter;
-        let idep = Interdependency::new(&msg, &tokenizer, &filter);
+        let idep = TokenRecord::new(&msg, &tokenizer, &filter);
         let expected_soc = HashMap::from([
             ("a", 4),
             ("b", 2),
@@ -127,61 +125,61 @@ mod tests {
             ("x4", 1),
         ]);
         let expected_poc = HashMap::from([
-            (PairSet::with("a", "x1"), 1),
-            (PairSet::with("a", "x2"), 1),
-            (PairSet::with("a", "x3"), 1),
-            (PairSet::with("a", "x4"), 1),
+            (TokenPair::with("a", "x1"), 1),
+            (TokenPair::with("a", "x2"), 1),
+            (TokenPair::with("a", "x3"), 1),
+            (TokenPair::with("a", "x4"), 1),
 
-            (PairSet::with("a", "b"), 2),
-            (PairSet::with("a", "c"), 2),
+            (TokenPair::with("a", "b"), 2),
+            (TokenPair::with("a", "c"), 2),
 
-            (PairSet::with("b", "x1"), 1),
-            (PairSet::with("b", "x2"), 1),
+            (TokenPair::with("b", "x1"), 1),
+            (TokenPair::with("b", "x2"), 1),
 
-            (PairSet::with("c", "x3"), 1),
-            (PairSet::with("c", "x4"), 1),
+            (TokenPair::with("c", "x3"), 1),
+            (TokenPair::with("c", "x4"), 1),
         ]);
         assert_eq!(expected_soc, idep.soc);
         assert_eq!(expected_poc, idep.poc);
 
-        assert_eq!(idep.dependency("a", "x1"), 0.25);
-        assert_eq!(idep.dependency("a", "x2"), 0.25);
-        assert_eq!(idep.dependency("a", "x3"), 0.25);
-        assert_eq!(idep.dependency("a", "x4"), 0.25);
+        assert_eq!(idep.dependency("a", "x1"), Some(0.25));
+        assert_eq!(idep.dependency("a", "x2"), Some(0.25));
+        assert_eq!(idep.dependency("a", "x3"), Some(0.25));
+        assert_eq!(idep.dependency("a", "x4"), Some(0.25));
 
-        assert_eq!(idep.dependency("x1", "a"), 1.0);
-        assert_eq!(idep.dependency("x2", "a"), 1.0);
-        assert_eq!(idep.dependency("x3", "a"), 1.0);
-        assert_eq!(idep.dependency("x4", "a"), 1.0);
+        assert_eq!(idep.dependency("x1", "a"), Some(1.0));
+        assert_eq!(idep.dependency("x2", "a"), Some(1.0));
+        assert_eq!(idep.dependency("x3", "a"), Some(1.0));
+        assert_eq!(idep.dependency("x4", "a"), Some(1.0));
 
-        assert_eq!(idep.dependency("b", "x1"), 0.5);
-        assert_eq!(idep.dependency("b", "x2"), 0.5);
+        assert_eq!(idep.dependency("b", "x1"), Some(0.5));
+        assert_eq!(idep.dependency("b", "x2"), Some(0.5));
 
-        assert_eq!(idep.dependency("x1", "b"), 1.0);
-        assert_eq!(idep.dependency("x2", "b"), 1.0);
+        assert_eq!(idep.dependency("x1", "b"), Some(1.0));
+        assert_eq!(idep.dependency("x2", "b"), Some(1.0));
 
-        assert_eq!(idep.dependency("c", "x3"), 0.5);
-        assert_eq!(idep.dependency("c", "x4"), 0.5);
+        assert_eq!(idep.dependency("c", "x3"), Some(0.5));
+        assert_eq!(idep.dependency("c", "x4"), Some(0.5));
 
-        assert_eq!(idep.dependency("x3", "c"), 1.0);
-        assert_eq!(idep.dependency("x4", "c"), 1.0);
+        assert_eq!(idep.dependency("x3", "c"), Some(1.0));
+        assert_eq!(idep.dependency("x4", "c"), Some(1.0));
 
-        assert_eq!(idep.dependency("a", "b"), 0.5);
-        assert_eq!(idep.dependency("a", "c"), 0.5);
+        assert_eq!(idep.dependency("a", "b"), Some(0.5));
+        assert_eq!(idep.dependency("a", "c"), Some(0.5));
 
-        assert_eq!(idep.dependency("b", "a"), 1.0);
-        assert_eq!(idep.dependency("c", "a"), 1.0);
+        assert_eq!(idep.dependency("b", "a"), Some(1.0));
+        assert_eq!(idep.dependency("c", "a"), Some(1.0));
 
-        assert!(idep.contains("a"));
-        assert!(idep.contains("b"));
-        assert!(idep.contains("c"));
-        assert!(idep.contains("x1"));
-        assert!(idep.contains("x2"));
-        assert!(idep.contains("x3"));
-        assert!(idep.contains("x4"));
+        assert!(idep.occurence("a").is_some());
+        assert!(idep.occurence("b").is_some());
+        assert!(idep.occurence("c").is_some());
+        assert!(idep.occurence("x1").is_some());
+        assert!(idep.occurence("x2").is_some());
+        assert!(idep.occurence("x3").is_some());
+        assert!(idep.occurence("x4").is_some());
 
-        assert!(!idep.contains("z"));
-        assert!(!idep.contains("x5"));
+        assert!(idep.occurence("z").is_none());
+        assert!(idep.occurence("x5").is_none());
     }
 
     

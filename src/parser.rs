@@ -6,12 +6,12 @@ use rayon::prelude::*;
 use fancy_regex::Regex;
 
 use crate::{
-    graph::{build_graph, anchor_nodes},
-    interdependency::Interdependency,
+    graph::{anchor_nodes, build_graph},
     template::{parameter_masks, shared_slices, templates},
     token_filter::StaticFilter,
+    token_record::TokenRecord,
     tokenizer::{Token, Tokenizer},
-    traits::{Contains, Dependency, Tokenize},
+    traits::Tokenize,
 };
 
 type Clusters = Vec<Option<usize>>;
@@ -24,7 +24,7 @@ pub struct Compute;
 /// Tipping (Token Interdependency Parsing) log parser
 /// ```
 /// use fancy_regex::Regex;
-/// 
+///
 ///let msgs = vec![
 ///     "User 'admin' logged in from IP address 192.168.1.10",
 ///     "Attempt to access unauthorized resource by user 'guest'",
@@ -186,7 +186,7 @@ impl Parser<NoCompute, NoCompute> {
             self.filter_numeric,
             self.filter_impure,
         );
-        let idep = Interdependency::new(messages, &tokenizer, &filter);
+        let idep = TokenRecord::new(messages, &tokenizer, &filter);
         let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         cmap.into_iter()
@@ -218,7 +218,7 @@ impl Parser<Compute, NoCompute> {
             self.filter_numeric,
             self.filter_impure,
         );
-        let idep = Interdependency::new(messages, &tokenizer, &filter);
+        let idep = TokenRecord::new(messages, &tokenizer, &filter);
         let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); cmap.len()];
@@ -271,7 +271,7 @@ impl Parser<NoCompute, Compute> {
             self.filter_numeric,
             self.filter_impure,
         );
-        let idep = Interdependency::new(messages, &tokenizer, &filter);
+        let idep = TokenRecord::new(messages, &tokenizer, &filter);
         let cmap = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut masks = HashMap::new();
@@ -324,7 +324,7 @@ impl Parser<Compute, Compute> {
             self.filter_numeric,
             self.filter_impure,
         );
-        let idep = Interdependency::new(messages, &tokenizer, &filter);
+        let idep = TokenRecord::new(messages, &tokenizer, &filter);
         let groups = group_by_anchor_tokens(messages, &tokenizer, &idep, self.threshold);
         let mut clus = vec![None; messages.len()];
         let mut temps = vec![HashSet::default(); groups.len()];
@@ -372,7 +372,7 @@ impl Parser<Compute, Compute> {
 fn group_by_anchor_tokens<'a, T: AsRef<str> + Sync>(
     messages: &'a [T],
     tokenizer: &Tokenizer,
-    idep: &'a Interdependency<'a>,
+    idep: &'a TokenRecord<'a>,
     threshold: f32,
 ) -> HashMap<BTreeSet<Token<'a>>, BTreeSet<usize>> {
     messages
@@ -386,8 +386,8 @@ fn group_by_anchor_tokens<'a, T: AsRef<str> + Sync>(
                     tokens
                         .iter()
                         .copied()
-                        .filter(|tok| idep.contains(tok.as_str())),
-                    |tok1, tok2| idep.dependency(tok1.as_str(), tok2.as_str()) > threshold,
+                        .filter(|tok| idep.occurence(tok.as_str()).is_some()),
+                    |tok1, tok2| idep.dependency(tok1.as_str(), tok2.as_str()).unwrap_or(0.0) > threshold,
                 );
                 let mut anchor_toks = anchor_nodes(graph);
                 for tok in tokens {
