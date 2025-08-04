@@ -14,7 +14,8 @@ pub fn shared_slices<'a, Iter: Iterator<Item = &'a str> + Send>(
     filter_numeric: bool,
     filter_impure: bool,
 ) -> HashSet<&'a str> {
-    iter.par_bridge()
+    let c = iter
+        .par_bridge()
         .map(|msg| tokenizer.tokenize(msg))
         .map(|toks_vec| {
             toks_vec
@@ -30,9 +31,19 @@ pub fn shared_slices<'a, Iter: Iterator<Item = &'a str> + Send>(
                 })
                 .collect::<HashSet<_>>()
         })
-        .reduce(Default::default, |s1, s2| {
-            s1.intersection(&s2).copied().collect()
-        })
+        .map(Some)
+        .reduce(
+            || None,
+            |s1, s2| match (s1, s2) {
+                (None, None) => None,
+                (None, Some(s)) => Some(s),
+                (Some(s), None) => Some(s),
+                (Some(s1), Some(s2)) => Some(s1.intersection(&s2).copied().collect()),
+            },
+        )
+        .unwrap_or_default();
+    let l = c.len();
+    c
 }
 
 pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
