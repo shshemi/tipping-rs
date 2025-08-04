@@ -101,11 +101,14 @@ impl Tokenizer {
     }
 }
 
-fn split_special<'a, Special: Fn(&'a str) -> PreToken>(
+fn split_special<'a, Special>(
     msg: &'a str,
     regex: &Regex,
     special_type: Special,
-) -> Vec<PreToken<'a>> {
+) -> Vec<PreToken<'a>>
+where
+    Special: Fn(&'a str) -> PreToken<'a>,
+{
     let mut last_idx = 0;
     let mut pre_tokens = Vec::new();
     for m in regex.find_iter(msg).filter_map(Result::ok) {

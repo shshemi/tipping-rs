@@ -1,6 +1,6 @@
 use hashbrown::{HashMap, HashSet};
 
-use crate::traits::{ TokenFilter, Tokenize};
+use crate::traits::{TokenFilter, Tokenize};
 use itertools::Itertools;
 
 use rayon::prelude::*;
@@ -52,9 +52,7 @@ impl<'a> TokenRecord<'a> {
 
                     // Insert single occurances
                     for tok in &toks {
-                        soc.entry(*tok)
-                            .and_modify(|count| *count += 1)
-                            .or_insert(1);
+                        soc.entry(*tok).and_modify(|count| *count += 1).or_insert(1);
                     }
 
                     // Insert double occurances
@@ -88,17 +86,16 @@ impl<'a> TokenRecord<'a> {
         self.soc.get(tok.as_ref()).copied()
     }
 
+    #[allow(dead_code)]
     pub fn coocurence(&self, tok1: impl AsRef<str>, tok2: impl AsRef<str>) -> Option<u32> {
-        self.poc.get(&TokenPair::with(tok1.as_ref(), tok2.as_ref())).copied()
+        self.poc
+            .get(&TokenPair::with(tok1.as_ref(), tok2.as_ref()))
+            .copied()
     }
 
     pub fn dependency(&self, eve: &'a str, con: &'a str) -> Option<f32> {
-        let double = *self
-            .poc
-            .get(&TokenPair::with(eve, con))?;
-        let single = *self
-            .soc
-            .get(eve)?;
+        let double = *self.poc.get(&TokenPair::with(eve, con))?;
+        let single = *self.soc.get(eve)?;
         Some((double as f32) / (single as f32))
     }
 }
@@ -129,13 +126,10 @@ mod tests {
             (TokenPair::with("a", "x2"), 1),
             (TokenPair::with("a", "x3"), 1),
             (TokenPair::with("a", "x4"), 1),
-
             (TokenPair::with("a", "b"), 2),
             (TokenPair::with("a", "c"), 2),
-
             (TokenPair::with("b", "x1"), 1),
             (TokenPair::with("b", "x2"), 1),
-
             (TokenPair::with("c", "x3"), 1),
             (TokenPair::with("c", "x4"), 1),
         ]);
@@ -182,7 +176,6 @@ mod tests {
         assert!(idep.occurence("x5").is_none());
     }
 
-    
     struct MockTokenizer;
     impl Tokenize for MockTokenizer {
         fn tokenize<'a>(&self, msg: &'a str) -> Vec<Token<'a>> {

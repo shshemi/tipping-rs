@@ -46,9 +46,7 @@ pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
                 .into_iter()
                 .map(|tok| tok.as_str())
                 .fold(Vec::new(), |mut temp, slice| {
-                    temp.push(
-                        common_slices.contains(slice).then_some(slice)
-                    );
+                    temp.push(common_slices.contains(slice).then_some(slice));
                     temp
                 })
         })
@@ -62,11 +60,7 @@ pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
         })
         .unwrap_or_default()
         .into_iter()
-        .map(|temp| {
-            temp.into_iter()
-                .map(|tok| if let Some(slice) = tok { slice } else { "<*>" })
-                .collect()
-        })
+        .map(|temp| temp.into_iter().map(|tok| tok.unwrap_or("<*>")).collect())
         .collect()
 }
 
@@ -168,8 +162,8 @@ mod tests {
         let common_slices = HashSet::from(["The", "value", "is", "val", "-", ">", "(", ")", "_"]);
         let pm = parameter_masks(msgs.into_iter(), &tokenizer, &common_slices);
         for (k, v) in pm {
-            println!("{}", k);
-            println!("{}", v);
+            println!("{k}");
+            println!("{v}");
         }
     }
 }
