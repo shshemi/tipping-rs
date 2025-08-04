@@ -30,8 +30,9 @@ pub fn shared_slices<'a, Iter: Iterator<Item = &'a str> + Send>(
                 })
                 .collect::<HashSet<_>>()
         })
-        .reduce_with(|s1, s2| s1.intersection(&s2).copied().collect())
-        .unwrap_or_default()
+        .reduce(Default::default, |s1, s2| {
+            s1.intersection(&s2).copied().collect()
+        })
 }
 
 pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
@@ -54,11 +55,15 @@ pub fn templates<'a, Iter: Iterator<Item = &'a str> + Send>(
             temp_set.insert(temp);
             temp_set
         })
-        .reduce_with(|mut s1, s2| {
-            s1.extend(s2);
-            s1
+        .reduce(Default::default, |s1, s2| {
+            let (mut larger, smaller) = if s1.len() > s2.len() {
+                (s1, s2)
+            } else {
+                (s2, s1)
+            };
+            larger.extend(smaller);
+            larger
         })
-        .unwrap_or_default()
         .into_iter()
         .map(|temp| temp.into_iter().map(|tok| tok.unwrap_or("<*>")).collect())
         .collect()

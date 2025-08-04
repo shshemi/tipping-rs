@@ -387,7 +387,9 @@ fn group_by_anchor_tokens<'a, T: AsRef<str> + Sync>(
                         .iter()
                         .copied()
                         .filter(|tok| idep.occurence(tok.as_str()).is_some()),
-                    |tok1, tok2| idep.dependency(tok1.as_str(), tok2.as_str()).unwrap_or(0.0) > threshold,
+                    |tok1, tok2| {
+                        idep.dependency(tok1.as_str(), tok2.as_str()).unwrap_or(0.0) > threshold
+                    },
                 );
                 let mut anchor_toks = anchor_nodes(graph);
                 for tok in tokens {
@@ -415,15 +417,27 @@ fn group_by_anchor_tokens<'a, T: AsRef<str> + Sync>(
                 map
             },
         )
-        .reduce_with(|mut m1, m2| {
-            m2.into_iter().for_each(|(k, v2)| {
-                if let Some(v1) = m1.get_mut(&k) {
-                    v1.extend(v2);
-                } else {
-                    m1.insert(k, v2);
+        .reduce(Default::default, |mut m1, mut m2| {
+            if m1.len() > m2.len() {
+                m1.reserve(m2.len());
+                for (k, v) in m2 {
+                    if let Some(set) = m1.get_mut(&k) {
+                        set.extend(v);
+                    } else {
+                        m1.insert(k, v);
+                    }
                 }
-            });
-            m1
+                m1
+            } else {
+                m2.reserve(m1.len());
+                for (k, v) in m1 {
+                    if let Some(set) = m2.get_mut(&k) {
+                        set.extend(v);
+                    } else {
+                        m2.insert(k, v);
+                    }
+                }
+                m2
+            }
         })
-        .unwrap_or_default()
 }

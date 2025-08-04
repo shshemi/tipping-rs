@@ -35,7 +35,6 @@ impl<'a> TokenRecord<'a> {
         Tokenizer: Tokenize + Sync,
         Filter: TokenFilter + Sync,
     {
-        // Self {
         let (soc, poc) = msgs
             .iter()
             .par_bridge()
@@ -64,20 +63,49 @@ impl<'a> TokenRecord<'a> {
                     (soc, poc)
                 },
             )
-            .reduce_with(|(mut soc1, mut poc1), (soc2, poc2)| {
-                for (tok, count2) in soc2 {
-                    soc1.entry(tok)
-                        .and_modify(|count1| *count1 += count2)
-                        .or_insert(count2);
-                }
-                for (pair, count2) in poc2 {
-                    poc1.entry(pair)
-                        .and_modify(|count1| *count1 += count2)
-                        .or_insert(count2);
-                }
-                (soc1, poc1)
-            })
-            .unwrap();
+            .reduce(
+                || (Default::default(), Default::default()),
+                |(mut soc1, mut poc1), (mut soc2, mut poc2)| {
+                    // merge soc
+                    let soc = if soc1.len() > soc2.len() {
+                        soc1.reserve(soc2.len());
+                        for (tok, count) in soc2 {
+                            soc1.entry(tok)
+                                .and_modify(|count1| *count1 += count)
+                                .or_insert(count);
+                        }
+                        soc1
+                    } else {
+                        soc2.reserve(soc1.len());
+                        for (tok, count) in soc1 {
+                            soc2.entry(tok)
+                                .and_modify(|count1| *count1 += count)
+                                .or_insert(count);
+                        }
+                        soc2
+                    };
+
+                    // merge poc
+                    let poc = if poc1.len() > poc2.len() {
+                        poc1.reserve(poc2.len());
+                        for (pair, count) in poc2 {
+                            poc1.entry(pair)
+                                .and_modify(|count1| *count1 += count)
+                                .or_insert(count);
+                        }
+                        poc1
+                    } else {
+                        poc2.reserve(poc1.len());
+                        for (pair, count) in poc1 {
+                            poc2.entry(pair)
+                                .and_modify(|count1| *count1 += count)
+                                .or_insert(count);
+                        }
+                        poc2
+                    };
+                    (soc, poc)
+                },
+            );
 
         Self { soc, poc }
     }
